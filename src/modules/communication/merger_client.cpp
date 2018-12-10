@@ -1,4 +1,5 @@
 #include "merger_client.hpp"
+#include "http_client.hpp"
 #include "merger_server.hpp"
 
 namespace gruut {
@@ -18,23 +19,10 @@ void MergerClient::sendMessage(MessageType msg_type,
 void MergerClient::sendToSE(MessageType msg_type,
                             std::vector<uint64_t> &receiver_list,
                             std::string &packed_msg) {
+  HttpClient http_client;
   for (uint64_t se_id : receiver_list) {
     // TODO: SE ID에 따른 ip와 port를 저장해 놓을 곳 필요.
-    std::unique_ptr<GruutSeService::Stub> stub = GruutSeService::NewStub(
-        CreateChannel("SE ip and port", InsecureChannelCredentials()));
-
-    ClientContext context;
-    // TODO: SE protobuf 수정작업 후 주석 해제.
-
-    /*  DataRequest request;
-      DataReply reply;
-
-      request.set_data(msg);
-      Status status = stub->sendData(&context, request, &reply);
-      if(!status.ok())
-        std::cout<<status.error_code() << ":
-    "<<status.error_message()<<std::endl;
-    }*/
+    http_client.sendData("SE Address", packed_msg);
   }
 }
 

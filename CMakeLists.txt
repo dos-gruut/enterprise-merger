@@ -8,6 +8,7 @@ add_definitions(-DBOOST_ASIO_ENABLE_HANDLER_TRACKING)
 
 include(cmake/clang-cxx-dev-tools.cmake)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem)
+find_package(CURL REQUIRED)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_executable(gruut_enterprise_merger main.cpp)
 
@@ -67,12 +68,17 @@ IF (Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIR})
 ENDIF (Boost_FOUND)
 
+IF (CURL_FOUND)
+    include_directories(${CURL_INCLUDE_DIR})
+ENDIF (CURL_FOUND)
+
 add_subdirectory(lib/leveldb)
 
 target_include_directories(gruut_enterprise_merger PRIVATE include/ /usr/local/include)
 target_link_libraries(gruut_enterprise_merger
         PRIVATE
         ${Boost_LIBRARIES}
+        ${CURL_LIBRARIES}
         leveldb
         ${LZ4_LIBS}
         ${BOTAN_LIBS}
