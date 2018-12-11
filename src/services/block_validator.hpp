@@ -1,18 +1,17 @@
 #pragma once
 
-#include <iostream>
-#include <string>
-#include <unordered_map>
-#include <vector>
-
 #include "../chain/types.hpp"
 #include "../utils/bytes_builder.hpp"
 #include "../utils/compressor.hpp"
 #include "../utils/rsa.hpp"
 #include "../utils/sha256.hpp"
-
 #include "nlohmann/json.hpp"
 #include "storage.hpp"
+
+#include <iostream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 std::unordered_map<std::string, std::string> KNOWN_CERT_MAP = {
     {"TUVSR0VSLTE=", R"UPK(-----BEGIN CERTIFICATE-----
@@ -161,6 +160,7 @@ public:
         return false;
       }
     }
+    return true;
   }
 };
 } // namespace gruut
