@@ -64,7 +64,7 @@ public:
       block_json_str.assign(block_header_comp);
     } else {
       std::cout << "unknown compress type" << std::endl;
-      return nlohmann::json();
+      return false;
     }
 
     return nlohmann::json::parse(block_json_str);
@@ -73,35 +73,42 @@ public:
   static bool validate(nlohmann::json &block_json, nlohmann::json &txs,
                        std::vector<sha256> &mtree_nodes) {
 
-    std::vector<std::vector<uint8_t>> tx_digests;
+    //    std::vector<std::vector<uint8_t>> tx_digests;
+    std::vector<sha256> tx_digests;
     if (!txs.is_array() || txs.empty() == 0) {
       std::cout << "tx is not array" << std::endl;
       return false;
     }
 
     std::unordered_map<std::string, std::string> user_cert_map;
+
     for (size_t i = 0; i < txs.size(); ++i) {
       BytesBuilder tx_digest_builder;
       tx_digest_builder.appendB64(txs[i]["txid"].get<std::string>());
       tx_digest_builder.append(txs[i]["time"].get<int64_t>());
       tx_digest_builder.appendB64(txs[i]["rID"].get<std::string>());
       tx_digest_builder.append(txs[i]["type"].get<std::string>());
+
       for (size_t j : txs[i]["content"]) {
         tx_digest_builder.append(txs[i]["content"][j].get<std::string>());
       }
+
       if (txs[i]["type"].get<std::string>() == "certificates") {
         for (size_t j = 0; j < txs[i]["content"].size(); j += 2) {
           user_cert_map[txs[i]["content"][j]] = txs[i]["content"][j + 1];
         }
       }
+
       BytesBuilder rsig_builder;
       rsig_builder.appendB64(txs[i]["rSig"].get<std::string>());
       auto it_merger_cert =
           KNOWN_CERT_MAP.find(txs[i]["rID"].get<std::string>());
+
       if (it_merger_cert == KNOWN_CERT_MAP.end()) {
         std::cout << "no certificate for sender" << std::endl;
         return false;
       }
+
       if (!RSA::doVerify(it_merger_cert->second, tx_digest_builder.getString(),
                          rsig_builder.getBytes(), true)) {
         std::cout << "invalid rSig" << std::endl;
@@ -117,10 +124,12 @@ public:
 
     BytesBuilder txrt_builder;
     txrt_builder.appendB64(block_json["txrt"].get<std::string>());
+
     if (txrt_builder.getBytes() != mtree_nodes.back()) {
       std::cout << "invalid merkle tree root" << std::endl;
       return false;
     }
+
     BytesBuilder ssig_msg_wo_sid_builder;
     ssig_msg_wo_sid_builder.append(block_json["time"].get<int64_t>());
     ssig_msg_wo_sid_builder.appendB64(block_json["mID"].get<std::string>());
@@ -140,21 +149,25 @@ public:
       ssig_sig_builder.appendB64(
           block_json["SSig"][k]["sig"].get<std::string>());
       std::string user_pk_pem;
+
       if (user_cert_map.empty()) {
         user_pk_pem = storage_manager->findCertificate(
             block_json["SSig"][k]["sID"].get<std::string>());
       } else {
         auto it_map =
             user_cert_map.find(block_json["SSig"][k]["sID"].get<std::string>());
-        if (it_map != user_cert_map.end())
+        if (it_map != user_cert_map.end()) {
           user_pk_pem = it_map->second;
-        else
+        } else {
           user_pk_pem = storage_manager->findCertificate(
               block_json["SSig"][k]["sID"].get<std::string>());
+        }
       }
+
       if (user_pk_pem.empty()) {
         return false;
       }
+
       if (!RSA::doVerify(user_pk_pem, ssig_msg_builder.getString(),
                          ssig_sig_builder.getBytes(), true)) {
         return false;
